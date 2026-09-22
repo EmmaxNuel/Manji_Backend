@@ -24,6 +24,7 @@ class SceneListSerializer(serializers.ModelSerializer):
             "cast",
             "mood",
             "duration",
+            "camera_type",
             "order",
             "chapter",
             "story",
@@ -64,6 +65,7 @@ class SceneDetailSerializer(SceneListSerializer):
             "dialogue",
             "narration",
             "camera_notes",
+            "camera_type",
         )
 
 
@@ -85,6 +87,7 @@ class SceneCreateUpdateSerializer(serializers.ModelSerializer):
             "cast",
             "dialogue",
             "narration",
+            "camera_type",
             "camera_notes",
             "mood",
             "duration",

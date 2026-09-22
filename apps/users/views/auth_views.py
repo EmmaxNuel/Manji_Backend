@@ -18,6 +18,9 @@ import json
 import urllib.parse
 import urllib.request
 
+from django.conf import settings
+
+from apps.core.gmail_service import send_email_via_gmail, GmailAPIError
 from ..serializers import (
     BecomeCreatorSerializer,
     PasswordChangeSerializer,
@@ -153,15 +156,73 @@ class PasswordResetRequestView(APIView):
             user = User.objects.get(email=email)
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
-            # In production send an email; for now we return the token in
-            # the response body (only visible in dev / tests).
             reset_link = f"{request.scheme}://{request.get_host()}/reset-password/{uid}/{token}/"
-            # TODO: send email via celery / SMTP
-            # For dev: include token in response
-            from django.conf import settings
+
+            # Send password reset email via Gmail API (or SMTP fallback)
+            subject = "Reset your MANJI password"
+            body_text = (
+                f"Hi {user.username},\n\n"
+                f"You requested a password reset for your MANJI account.\n\n"
+                f"Click the link below to set a new password:\n"
+                f"{reset_link}\n\n"
+                f"This link expires in 24 hours. If you didn't request this, "
+                f"you can safely ignore this email.\n\n"
+                f"— The MANJI Team"
+            )
+            body_html = f"""
+                <html>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h2 style="color: #ff6b35;">Reset your MANJI password</h2>
+                        <p>Hi {user.username},</p>
+                        <p>You requested a password reset for your MANJI account.</p>
+                        <p>
+                            <a href="{reset_link}" 
+                               style="display: inline-block; padding: 12px 24px; 
+                                      background: #ff6b35; color: white; 
+                                      text-decoration: none; border-radius: 4px;">
+                                Reset Password
+                            </a>
+                        </p>
+                        <p style="color: #666; font-size: 14px;">
+                            This link expires in 24 hours. If you didn't request this, 
+                            you can safely ignore this email.
+                        </p>
+                        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                        <p style="color: #999; font-size: 12px;">— The MANJI Team</p>
+                    </div>
+                </body>
+                </html>
+            """
+
+            # Try Gmail API first, fall back to Django's email backend
+            email_sent = False
+            try:
+                send_email_via_gmail(
+                    to=email,
+                    subject=subject,
+                    body_text=body_text,
+                    body_html=body_html,
+                    fail_silently=False,
+                )
+                email_sent = True
+            except GmailAPIError:
+                # Fall back to Django's email backend (SMTP/console)
+                from django.core.mail import send_mail
+                send_mail(
+                    subject=subject,
+                    message=body_text,
+                    from_email=None,
+                    recipient_list=[email],
+                    html_message=body_html,
+                    fail_silently=False,
+                )
+                email_sent = True
+
             data = {"message": "If that email exists, a reset link has been sent."}
             if settings.DEBUG:
                 data["debug_reset_link"] = reset_link
+                data["debug_email_sent"] = email_sent
             return Response({"success": True, **data})
         except User.DoesNotExist:
             pass

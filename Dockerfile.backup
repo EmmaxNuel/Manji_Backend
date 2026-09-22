@@ -1,0 +1,14 @@
+FROM postgres:16-alpine
+
+RUN apk add --no-cache postgresql-client
+
+COPY scripts/backup_postgres.sh /usr/local/bin/backup_postgres.sh
+COPY scripts/restore_postgres.sh /usr/local/bin/restore_postgres.sh
+
+RUN chmod +x /usr/local/bin/backup_postgres.sh /usr/local/bin/restore_postgres.sh
+
+RUN mkdir -p /backups
+
+ENV BACKUP_RETENTION_DAYS=30
+
+CMD ["crond", "-f", "-l", "2"]

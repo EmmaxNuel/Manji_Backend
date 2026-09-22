@@ -22,6 +22,17 @@ from django.utils import timezone
 
 
 class Scene(models.Model):
+    class CameraType(models.TextChoices):
+        WIDE = "wide_shot", "Wide Shot"
+        MEDIUM = "medium_shot", "Medium Shot"
+        CLOSE_UP = "close_up", "Close-Up"
+        EXTREME_CLOSE_UP = "extreme_close_up", "Extreme Close-Up"
+        OVER_SHOULDER = "over_the_shoulder", "Over-the-Shoulder"
+        POV = "pov", "POV"
+        ESTABLISHING = "establishing_shot", "Establishing Shot"
+        TRACKING = "tracking_shot", "Tracking Shot"
+        AERIAL = "aerial", "Aerial"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey(
         "projects.Project",
@@ -47,10 +58,6 @@ class Scene(models.Model):
     description = models.TextField(blank=True)
     location = models.CharField(max_length=200, blank=True)
 
-    # Characters present in the scene. ``characters`` keeps the Phase 2
-    # JSON list of names for backward compatibility; ``cast`` is the real
-    # ManyToMany to the Character system (Phase 3). Names are kept in sync
-    # with the cast whenever a scene is saved through the API.
     characters = models.JSONField(default=list, blank=True)
     cast = models.ManyToManyField(
         "characters.Character",
@@ -58,11 +65,15 @@ class Scene(models.Model):
         blank=True,
     )
 
-    # Written content
     dialogue = models.TextField(blank=True)
     narration = models.TextField(blank=True)
 
-    # Production notes
+    camera_type = models.CharField(
+        max_length=30,
+        choices=CameraType.choices,
+        blank=True,
+        db_index=True,
+    )
     camera_notes = models.TextField(blank=True)
     mood = models.CharField(max_length=100, blank=True)
     duration = models.PositiveIntegerField(

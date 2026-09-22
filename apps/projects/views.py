@@ -15,7 +15,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.stories.models import Story
-from apps.stories.serializers import StoryCreateUpdateSerializer, StoryDetailSerializer
+from apps.stories.serializers import StoryCreateUpdateSerializer, StoryDetailSerializer, StoryListSerializer
 
 from .models import Project
 from .serializers import (
@@ -229,6 +229,46 @@ class ProjectStoryView(APIView):
         )
 
 
+class ProjectStoryPickerView(APIView):
+    """
+    GET /api/projects/<project_id>/story/picker/ – list user's stories for linking.
+
+    Returns a lightweight list of the caller's stories (title, cover, slug, updated_at).
+    Supports ?search= query for filtering by title.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, project_id):
+        project = _get_owned_project(request.user, project_id)
+        if project is None:
+            return Response(
+                {"success": False, "error": {"message": "Project not found."}},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        qs = Story.objects.filter(author=request.user).order_by("-updated_at")
+        search = request.query_params.get("search")
+        if search:
+            qs = qs.filter(title__icontains=search)
+
+        # Lightweight serialization for picker
+        data = [
+            {
+                "id": str(s.id),
+                "title": s.title,
+                "slug": s.slug,
+                "cover": request.build_absolute_uri(s.cover.url) if s.cover else None,
+                "content_type": s.content_type,
+                "status": s.status,
+                "updated_at": s.updated_at.isoformat() if s.updated_at else None,
+                "chapters_count": s.chapters_count,
+            }
+            for s in qs[:50]
+        ]
+        return Response({"success": True, "data": data})
+
+
 class ProjectStoryLinkView(APIView):
     """
     POST /api/projects/<project_id>/story/link/ – link an existing story.
@@ -264,7 +304,7 @@ class ProjectStoryLinkView(APIView):
         if story.author != request.user and not request.user.is_admin:
             return Response(
                 {"success": False, "error": {"message": "You can only link your own stories."}},
-                status=status.HTTP_403_FORBIDDEN,
+                status=status.HTTP_404_NOT_FOUND,
             )
         if project.story is not None and project.story.id != story.id:
             return Response(

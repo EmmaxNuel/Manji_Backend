@@ -2,7 +2,7 @@
 
 from rest_framework import serializers
 
-from .models import AnimationFrame, AnimationLayer, AnimationProject
+from .models import AnimationFrame, AnimationLayer, AnimationProject, Episode
 
 
 def _layer_identity(layer):
@@ -145,6 +145,85 @@ class AnimationFrameSerializer(serializers.ModelSerializer):
         if not isinstance(value, dict):
             raise serializers.ValidationError("Frame data must be an object.")
         return value
+
+
+class EpisodeListSerializer(serializers.ModelSerializer):
+    animation = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Episode
+        fields = (
+            "id",
+            "animation",
+            "episode_number",
+            "title",
+            "description",
+            "thumbnail",
+            "duration",
+            "status",
+            "published_at",
+            "updated_at",
+        )
+        read_only_fields = fields
+
+    def get_animation(self, obj):
+        return {
+            "id": str(obj.animation_id),
+            "title": obj.animation.title,
+        }
+
+
+class EpisodeDetailSerializer(EpisodeListSerializer):
+    class Meta(EpisodeListSerializer.Meta):
+        fields = EpisodeListSerializer.Meta.fields + ("animation",)
+
+
+class EpisodeCreateUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Episode
+        fields = (
+            "id",
+            "episode_number",
+            "title",
+            "description",
+            "thumbnail",
+            "duration",
+            "status",
+        )
+        read_only_fields = ("id",)
+        extra_kwargs = {
+            "episode_number": {"required": False},
+            "title": {"required": False},
+            "description": {"required": False},
+            "thumbnail": {"required": False},
+            "duration": {"required": False},
+            "status": {"required": False},
+        }
+
+    def validate_title(self, value):
+        value = (value or "").strip()
+        if not value:
+            raise serializers.ValidationError("Give this episode a title.")
+        return value
+
+    def validate_episode_number(self, value):
+        if value is not None and value < 1:
+            raise serializers.ValidationError("Episode number must be 1 or greater.")
+        return value
+
+    def create(self, validated_data):
+        animation = self.context["animation"]
+        episode_number = validated_data.get("episode_number")
+        title = validated_data.get("title") or animation.title
+        description = validated_data.get("description") or ""
+        instance = Episode.objects.create(
+            animation=animation,
+            episode_number=episode_number,
+            title=title,
+            description=description,
+            **{k: v for k, v in validated_data.items() if k not in ("episode_number", "title", "description")},
+        )
+        return instance
 
 
 class AnimationFrameCreateSerializer(serializers.ModelSerializer):

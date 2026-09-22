@@ -9,7 +9,9 @@ from .views import (
     AnimationLayerListView,
     AnimationLayerReorderView,
     AnimationProjectDetailView,
+    EpisodeDetailView,
     ProjectAnimationListCreateView,
+    ProjectEpisodeListCreateView,
 )
 
 urlpatterns = [
@@ -42,6 +44,11 @@ animation_urlpatterns = [
         name="animation-frames",
     ),
     path(
+        "<uuid:animation_id>/episodes/",
+        ProjectEpisodeListCreateView.as_view(),
+        name="project-episode-list-create",
+    ),
+    path(
         "layers/<uuid:layer_id>/",
         AnimationLayerDetailView.as_view(),
         name="animation-layer-detail",
@@ -50,5 +57,10 @@ animation_urlpatterns = [
         "frames/<uuid:frame_id>/",
         AnimationFrameDetailView.as_view(),
         name="animation-frame-detail",
+    ),
+    path(
+        "episodes/<uuid:episode_id>/",
+        EpisodeDetailView.as_view(),
+        name="episode-detail",
     ),
 ]

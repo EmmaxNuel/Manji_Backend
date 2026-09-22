@@ -33,6 +33,9 @@ from .serializers import (
     AnimationProjectCreateUpdateSerializer,
     AnimationProjectDetailSerializer,
     AnimationProjectListSerializer,
+    EpisodeCreateUpdateSerializer,
+    EpisodeDetailSerializer,
+    EpisodeListSerializer,
 )
 
 
@@ -308,8 +311,87 @@ class AnimationFrameDetailView(APIView):
         with transaction.atomic():
             index = frame.index
             frame.delete()
-            # Close the gap: shift all later frames down by one.
             AnimationFrame.objects.filter(
                 animation=frame.animation, index__gt=index
             ).update(index=models.F("index") - 1)
         return Response({"success": True, "message": "Frame deleted."})
+
+
+class ProjectEpisodeListCreateView(APIView):
+    """GET/POST /api/animation/<animation_id>/episodes/"""
+
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get(self, request, animation_id):
+        animation = _owned_animation(request.user, animation_id)
+        if animation is None:
+            return _not_found()
+        qs = animation.episodes.all()
+        serializer = EpisodeListSerializer(qs, many=True)
+        return Response({"success": True, "data": serializer.data})
+
+    def post(self, request, animation_id):
+        animation = _owned_animation(request.user, animation_id)
+        if animation is None:
+            return _not_found()
+        if not request.user.is_creator:
+            return Response(
+                {"success": False, "error": {"message": "Only creators can manage episodes."}},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        serializer = EpisodeCreateUpdateSerializer(
+            data=request.data, context={"animation": animation}
+        )
+        if not serializer.is_valid():
+            return _invalid("Validation failed.", serializer.errors)
+        episode = serializer.save()
+        return Response(
+            {"success": True, "data": EpisodeDetailSerializer(episode).data},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class EpisodeDetailView(APIView):
+    """GET/PATCH/DELETE /api/animation/episodes/<episode_id>/"""
+
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def _get_episode(self, request, episode_id):
+        episode = get_object_or_404(
+            Episode.objects.select_related("animation__project__owner"),
+            pk=episode_id,
+        )
+        if not request.user.is_admin and episode.animation.project.owner != request.user:
+            return None
+        return episode
+
+    def get(self, request, episode_id):
+        episode = self._get_episode(request, episode_id)
+        if episode is None:
+            return _not_found()
+        return Response(
+            {"success": True, "data": EpisodeDetailSerializer(episode).data}
+        )
+
+    def patch(self, request, episode_id):
+        episode = self._get_episode(request, episode_id)
+        if episode is None:
+            return _not_found()
+        serializer = EpisodeCreateUpdateSerializer(
+            episode, data=request.data, partial=True
+        )
+        if not serializer.is_valid():
+            return _invalid("Validation failed.", serializer.errors)
+        episode = serializer.save()
+        return Response(
+            {"success": True, "data": EpisodeDetailSerializer(episode).data}
+        )
+
+    def delete(self, request, episode_id):
+        episode = self._get_episode(request, episode_id)
+        if episode is None:
+            return _not_found()
+        episode.delete()
+        return Response({"success": True, "message": "Episode deleted."})

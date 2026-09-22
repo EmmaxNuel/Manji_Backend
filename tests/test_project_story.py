@@ -69,7 +69,7 @@ class ProjectStoryAPITests(APITestCase):
             {"title": "Nope", "description": "No."},
             format="json",
         )
-        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_cannot_create_story_when_already_linked(self):
         story = StoryFactory(author=self.creator)
@@ -97,7 +97,7 @@ class ProjectStoryAPITests(APITestCase):
         resp = self.client.post(
             self.story_url(action="link/"), {"story_id": str(story.id)}, format="json"
         )
-        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_unlink_removes_link_but_keeps_story(self):
         story = StoryFactory(author=self.creator)

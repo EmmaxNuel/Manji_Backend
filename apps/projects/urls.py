@@ -10,12 +10,14 @@ from .views import (
     ProjectDetailView,
     ProjectListCreateView,
     ProjectStoryLinkView,
+    ProjectStoryPickerView,
     ProjectStoryUnlinkView,
     ProjectStoryView,
 )
 
 urlpatterns = [
     path("", ProjectListCreateView.as_view(), name="project-list-create"),
+    path("<uuid:project_id>/story/picker/", ProjectStoryPickerView.as_view(), name="project-story-picker"),
     path("<uuid:project_id>/story/unlink/", ProjectStoryUnlinkView.as_view(), name="project-story-unlink"),
     path("<uuid:project_id>/story/link/", ProjectStoryLinkView.as_view(), name="project-story-link"),
     path("<uuid:project_id>/story/", ProjectStoryView.as_view(), name="project-story"),

@@ -66,7 +66,9 @@ LOCAL_APPS = [
     "apps.assets",
     "apps.storyboard",
     "apps.animation",
+    "apps.audio",
     "apps.tour",
+    "apps.official",
     "apps.library",
     "apps.social",
     "apps.notifications",
@@ -74,6 +76,24 @@ LOCAL_APPS = [
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
+
+# ---------------------------------------------------------------------------
+# Security Middleware (CSP, etc.)
+# ---------------------------------------------------------------------------
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
+SECURE_CROSS_ORIGIN_EMBEDDER_POLICY = "require-corp"
+
+# CSP settings (used by csp middleware)
+CSP_DEFAULT_SRC = ("'self'",)
+CSP_SCRIPT_SRC = ("'self'",)
+CSP_STYLE_SRC = ("'self'", "'unsafe-inline'")
+CSP_IMG_SRC = ("'self'", "data:", "https:")
+CSP_FONT_SRC = ("'self'", "data:")
+CSP_CONNECT_SRC = ("'self'", "wss:", "https:")
+CSP_FRAME_ANCESTORS = ("'none'",)
+CSP_FORM_ACTION = ("'self'",)
+CSP_BASE_URI = ("'self'",)
+CSP_OBJECT_SRC = ("'none'",)
 
 # ---------------------------------------------------------------------------
 # Middleware
@@ -87,6 +107,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "csp.middleware.CSPMiddleware",
 ]
 
 # ---------------------------------------------------------------------------
@@ -206,7 +227,16 @@ SIMPLE_JWT = {
 # ---------------------------------------------------------------------------
 CORS_ALLOWED_ORIGINS = env.list(
     "CORS_ALLOWED_ORIGINS",
-    default=["http://localhost:5173", "http://127.0.0.1:5173"],
+    default=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+        "http://localhost:5175",
+        "http://127.0.0.1:5175",
+        "http://localhost:5176",
+        "http://127.0.0.1:5176",
+    ],
 )
 CORS_ALLOW_CREDENTIALS = True
 
@@ -235,6 +265,23 @@ EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@manji.io")
 
 # ---------------------------------------------------------------------------
+# Gmail API (OAuth2) for transactional emails
+# ---------------------------------------------------------------------------
+# Get these from Google Cloud Console:
+# 1. Create OAuth 2.0 Client ID (Web application)
+# 2. Authorized redirect URI: https://developers.google.com/oauthplayground
+# 3. Use OAuth Playground to get refresh token with scope:
+#    https://www.googleapis.com/auth/gmail.send
+GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", default="")
+GOOGLE_OAUTH_CLIENT_SECRET = env("GOOGLE_OAUTH_CLIENT_SECRET", default="")
+GOOGLE_OAUTH_REFRESH_TOKEN = env("GOOGLE_OAUTH_REFRESH_TOKEN", default="")
+
+# ---------------------------------------------------------------------------
+# Frontend URL for email links
+# ---------------------------------------------------------------------------
+FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:5173")
+
+# ---------------------------------------------------------------------------
 # File upload limits
 # ---------------------------------------------------------------------------
 DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024   # 20 MB
@@ -242,6 +289,9 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024   # 20 MB
 
 # Largest single asset a creator may upload to the project library (MB).
 ASSET_MAX_UPLOAD_MB = env.int("ASSET_MAX_UPLOAD_MB", default=100)
+
+# Largest single voice/audio clip a creator may upload to the voice studio (MB).
+AUDIO_MAX_UPLOAD_MB = env.int("AUDIO_MAX_UPLOAD_MB", default=50)
 
 # ---------------------------------------------------------------------------
 # AI integrations (image generation + idea generation)

@@ -15,6 +15,7 @@ from drf_spectacular.views import (
 from apps.ai import views as ai_views
 from apps.assets import views as assets_views
 from apps.animation.urls import animation_urlpatterns as animation_urls
+from apps.audio.urls import urlpatterns as audio_urlpatterns
 from apps.characters.urls import character_urlpatterns as characters_urlpatterns
 from apps.scenes import views as scenes_views
 from apps.storyboard import views as storyboard_views
@@ -93,8 +94,14 @@ urlpatterns = [
     path("api/projects/<uuid:project_id>/animation/", include("apps.animation.urls")),
     path("api/animation/", include(animation_urls)),
 
+    # API v1 – Audio & Voice Studio
+    path("api/", include("apps.audio.urls")),
+
     # API v1 – Library
     path("api/library/", include("apps.library.urls")),
+
+    # API v1 – Official Content
+    path("api/official/", include("apps.official.urls")),
 
     # API v1 – Manji AI (chat, conversations)
     path("api/ai/", include("apps.ai.urls")),
@@ -109,10 +116,13 @@ urlpatterns = [
 ]
 
 if settings.DEBUG:
-    import debug_toolbar
-    urlpatterns = [
-        path("__debug__/", include(debug_toolbar.urls)),
-    ] + urlpatterns
+    try:
+        import debug_toolbar
+        urlpatterns = [
+            path("__debug__/", include(debug_toolbar.urls)),
+        ] + urlpatterns
+    except ImportError:
+        pass
 
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
