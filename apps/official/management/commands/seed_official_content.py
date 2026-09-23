@@ -132,11 +132,11 @@ class Command(BaseCommand):
             animation=animation,
             episode_number=1,
             defaults={
-                'title': 'Official Trailer — In Production',
+                'title': 'Official Teaser',
                 'description': (
-                    'The official MANJI animated series is in production. '
-                    'The trailer video will appear here once it is finished. '
-                    'Meanwhile, read the story it adapts.'
+                    'The official MANJI teaser. The full animated series is '
+                    'in production — new episodes appear here as animation '
+                    'is completed. Meanwhile, read the story it adapts.'
                 ),
                 'order': 1,
                 'is_published': True,
@@ -146,6 +146,31 @@ class Command(BaseCommand):
             self.stdout.write(f'  Episode: {trailer.title}')
         else:
             self.stdout.write('  Episode: trailer already exists, kept as-is')
+            # Migrate the earlier placeholder copy to the teaser copy —
+            # only when it still carries the old placeholder text.
+            if trailer.title == 'Official Trailer — In Production':
+                trailer.title = 'Official Teaser'
+                trailer.description = (
+                    'The official MANJI teaser. The full animated series is '
+                    'in production — new episodes appear here as animation '
+                    'is completed. Meanwhile, read the story it adapts.'
+                )
+                trailer.save(update_fields=['title', 'description', 'updated_at'])
+                self.stdout.write('  Episode: placeholder copy updated to teaser copy')
+
+        # Attach the hosted teaser video + duration, but ONLY when the
+        # episode has no video yet — a real upload by an admin is never
+        # overwritten by the seed.
+        TEASER_URL = (
+            'https://manji-download.olatunjie335.workers.dev/teaser.mp4'
+        )
+        if not trailer.video_url and not trailer.video_file:
+            trailer.video_url = TEASER_URL
+            trailer.duration = 10
+            trailer.save(update_fields=['video_url', 'duration', 'updated_at'])
+            self.stdout.write('  Episode: teaser video attached')
+        else:
+            self.stdout.write('  Episode: video already set, kept as-is')
 
         self.stdout.write(self.style.SUCCESS('Successfully seeded official MANJI content!'))
         self.stdout.write(f'Total chapters: {len(CHAPTERS)}')
