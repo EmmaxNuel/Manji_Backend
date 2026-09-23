@@ -24,6 +24,9 @@ urlpatterns = [
     # Admin
     path("admin/", admin.site.urls),
 
+    # Health checks, robots.txt, sitemap.xml, release info
+    path("", include("apps.core.urls")),
+
     # API v1 – Auth & Users
     path("api/auth/", include("apps.users.urls.auth")),
     path("api/users/", include("apps.users.urls.users")),
