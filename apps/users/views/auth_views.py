@@ -156,7 +156,9 @@ class PasswordResetRequestView(APIView):
             user = User.objects.get(email=email)
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
-            reset_link = f"{request.scheme}://{request.get_host()}/reset-password/{uid}/{token}/"
+            # Reset page lives on the frontend, not the API host
+            frontend = getattr(settings, "FRONTEND_URL", "").rstrip("/") or f"{request.scheme}://{request.get_host()}"
+            reset_link = f"{frontend}/reset-password/{uid}/{token}/"
 
             # Send password reset email via Gmail API (or SMTP fallback)
             subject = "Reset your MANJI password"
@@ -195,7 +197,10 @@ class PasswordResetRequestView(APIView):
                 </html>
             """
 
-            # Try Gmail API first, fall back to Django's email backend
+            # Try Gmail API first, fall back to Django's email backend.
+            # Never raise: this endpoint always returns success to avoid
+            # email enumeration, and a broken mail provider must not 500.
+            import logging
             email_sent = False
             try:
                 send_email_via_gmail(
@@ -206,18 +211,21 @@ class PasswordResetRequestView(APIView):
                     fail_silently=False,
                 )
                 email_sent = True
-            except GmailAPIError:
-                # Fall back to Django's email backend (SMTP/console)
-                from django.core.mail import send_mail
-                send_mail(
-                    subject=subject,
-                    message=body_text,
-                    from_email=None,
-                    recipient_list=[email],
-                    html_message=body_html,
-                    fail_silently=False,
-                )
-                email_sent = True
+            except Exception as exc:  # GmailAPIError or config missing
+                logging.getLogger(__name__).warning("Gmail send failed: %s", exc)
+                try:
+                    from django.core.mail import send_mail
+                    send_mail(
+                        subject=subject,
+                        message=body_text,
+                        from_email=None,
+                        recipient_list=[email],
+                        html_message=body_html,
+                        fail_silently=True,
+                    )
+                    email_sent = True
+                except Exception as smtp_exc:
+                    logging.getLogger(__name__).error("SMTP fallback failed: %s", smtp_exc)
 
             data = {"message": "If that email exists, a reset link has been sent."}
             if settings.DEBUG:
