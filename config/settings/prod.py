@@ -52,15 +52,17 @@ DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 
 STATICFILES_STORAGE = "storages.backends.s3boto3.S3StaticStorage"
 
-AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID")
+AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
 
-AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY")
+AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="")
 
-AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME")
+AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="manji-media")
 
 AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="us-east-1")
 
 AWS_S3_CUSTOM_DOMAIN = env("AWS_S3_CUSTOM_DOMAIN", default="")
+
+AWS_S3_ENDPOINT_URL = env("AWS_S3_ENDPOINT_URL", default="")
 
 AWS_S3_OBJECT_PARAMETERS = {
     "CacheControl": "max-age=86400",
@@ -76,17 +78,17 @@ MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN or AWS_STORAGE_BUCKET_NAME}.s3.{AWS_
 
 STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN or AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/static/"
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
 
-EMAIL_HOST = env("EMAIL_HOST")
+EMAIL_HOST = env("EMAIL_HOST", default="")
 
 EMAIL_PORT = env.int("EMAIL_PORT", default=587)
 
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 
-EMAIL_HOST_USER = env("EMAIL_HOST_USER")
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 
-EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@manji.io")
 
