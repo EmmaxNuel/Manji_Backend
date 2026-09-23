@@ -21,6 +21,8 @@ COPY . .
 
 RUN DJANGO_SETTINGS_MODULE=config.settings.dev SECRET_KEY=build-only-key DEBUG=False python manage.py collectstatic --noinput || true
 
+RUN chmod +x /app/start.sh /app/release.sh
+
 EXPOSE 8000
 
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-"]
+CMD ["/app/start.sh"]
