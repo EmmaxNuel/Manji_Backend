@@ -1,6 +1,9 @@
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
-from apps.official.models import OfficialSeries, OfficialSeason, OfficialArc, OfficialStory, OfficialChapter
+from apps.official.models import (
+    OfficialSeries, OfficialSeason, OfficialArc, OfficialStory, OfficialChapter,
+    OfficialAnimation, OfficialEpisode,
+)
 from apps.stories.models import Story
 from apps.chapters.models import Chapter
 from .story_content import CHAPTERS
@@ -103,6 +106,46 @@ class Command(BaseCommand):
                 defaults={'order': ch_data['number'], 'is_published': True}
             )
             self.stdout.write(f'  Chapter {ch_data["number"]}: {ch_data["title"]}')
+
+        # Official animation shell: series entry + trailer placeholder.
+        # Honest by design — no video yet, so the episode carries an
+        # "In Production" title/description and the app renders its
+        # "video not available yet" placeholder. Replaced by real
+        # episodes (with video) as animation is produced.
+        animation, _ = OfficialAnimation.objects.get_or_create(
+            slug='manji-the-world-beyond',
+            defaults={
+                'series': series,
+                'arc': arc,
+                'title': 'MANJI: The World Beyond',
+                'description': (
+                    'The animated adaptation of the official MANJI story. '
+                    'Episodes appear here as animation is completed.'
+                ),
+                'order': 1,
+                'is_published': True,
+            }
+        )
+        self.stdout.write(f'  Animation: {animation.title}')
+
+        trailer, created = OfficialEpisode.objects.get_or_create(
+            animation=animation,
+            episode_number=1,
+            defaults={
+                'title': 'Official Trailer — In Production',
+                'description': (
+                    'The official MANJI animated series is in production. '
+                    'The trailer video will appear here once it is finished. '
+                    'Meanwhile, read the story it adapts.'
+                ),
+                'order': 1,
+                'is_published': True,
+            }
+        )
+        if created:
+            self.stdout.write(f'  Episode: {trailer.title}')
+        else:
+            self.stdout.write('  Episode: trailer already exists, kept as-is')
 
         self.stdout.write(self.style.SUCCESS('Successfully seeded official MANJI content!'))
         self.stdout.write(f'Total chapters: {len(CHAPTERS)}')
