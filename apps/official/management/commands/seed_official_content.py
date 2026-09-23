@@ -55,7 +55,6 @@ class Command(BaseCommand):
                 'cover': '',
                 'status': 'published',
                 'is_official': True,
-                'is_active': True,
             }
         )
         self.stdout.write(f'  Story: {story_obj.title}')
