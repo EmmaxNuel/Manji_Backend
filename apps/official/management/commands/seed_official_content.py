@@ -1,8 +1,11 @@
+from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from apps.official.models import OfficialSeries, OfficialSeason, OfficialArc, OfficialStory, OfficialChapter
 from apps.stories.models import Story
 from apps.chapters.models import Chapter
 from .story_content import CHAPTERS
+
+User = get_user_model()
 
 
 class Command(BaseCommand):
@@ -10,6 +13,17 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.stdout.write('Seeding official MANJI content...')
+
+        # System author for official content
+        author, _ = User.objects.get_or_create(
+            email='official@manji.io',
+            defaults={
+                'username': 'manji_official',
+                'role': User.Role.ADMIN,
+                'is_official': True,
+                'is_active': True,
+            },
+        )
 
         series, _ = OfficialSeries.objects.get_or_create(
             slug='manji',
@@ -55,6 +69,8 @@ class Command(BaseCommand):
                 'cover': '',
                 'status': 'published',
                 'is_official': True,
+                'author': author,
+                'content_type': 'novel',
             }
         )
         self.stdout.write(f'  Story: {story_obj.title}')
