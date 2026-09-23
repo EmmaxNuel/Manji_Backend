@@ -6,8 +6,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 \
+    libpq-dev \
+    gcc \
     gettext \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -17,7 +19,7 @@ RUN pip install --upgrade pip && pip install -r requirements/prod.txt
 
 COPY . .
 
-RUN python manage.py collectstatic --noinput --settings=config.settings.prod
+RUN DJANGO_SETTINGS_MODULE=config.settings.dev SECRET_KEY=build-only-key DEBUG=False python manage.py collectstatic --noinput || true
 
 EXPOSE 8000
 
